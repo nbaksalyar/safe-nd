@@ -9,10 +9,12 @@
 
 use crate::errors::Error;
 use crate::request::{Request, Requester};
+use crate::PublicKey;
 use crate::XorName;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use threshold_crypto::{PublicKey, PublicKeySet};
+use threshold_crypto::PublicKey as BlsPublicKey;
+use threshold_crypto::Signature;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum User {
@@ -20,13 +22,26 @@ pub enum User {
     Key(PublicKey),
 }
 
+fn verify_owner_sig(sig: &Signature) -> bool {
+    true
+}
+
 pub fn check_permissions<P: Permissions>(
-    _data: impl AppendOnlyData<P>,
-    _rpc: &Request,
-    _requester: Requester,
+    data: impl AppendOnlyData<P>,
+    rpc: &Request,
+    requester: Requester,
 ) -> Result<bool, Error> {
-    // TODO
-    Ok(true)
+    match rpc {
+        Request::GetADataRange { .. } => Ok(true),
+        Request::DeleteUnseqAData { .. } => {
+            if let Requester::Owner(ref sig) = requester {
+                Ok(verify_owner_sig(&sig))
+            } else {
+                Err(Error::AccessDenied)
+            }
+        }
+        x => Err(Error::InvalidOperation),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -168,7 +183,7 @@ impl Permissions for PubPermissions {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Owners {
-    owners: PublicKeySet,
+    owners: BlsPublicKey,
     /// The current index of the data when this ownership change happened
     data_index: u64,
     /// The current index of the permissions when this ownership change happened
@@ -497,7 +512,7 @@ mod tests {
 
         // Append the first owner with correct indexes - should pass.
         let res = data.append_owners(Owners {
-            owners: owners_pk_set.public_keys(),
+            owners: owners_pk_set.public_keys().public_key(),
             data_index: 0,
             permission_entry_index: 0,
         });
@@ -515,7 +530,7 @@ mod tests {
 
         // Append another owners entry with incorrect indexes - should fail.
         let res = data.append_owners(Owners {
-            owners: owners_pk_set.public_keys(),
+            owners: owners_pk_set.public_keys().public_key(),
             data_index: 64,
             permission_entry_index: 0,
         });

@@ -12,13 +12,14 @@ use crate::appendable_data::{
 };
 use crate::immutable_data::UnpubImmutableData;
 use crate::mutable_data::{MutableDataRef, SeqMutableData, UnseqMutableData};
+use crate::public_key::PublicKey;
 use crate::MessageId;
 use crate::XorName;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use threshold_crypto::{PublicKey, Signature};
+use threshold_crypto::Signature;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd, Ord, Eq, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Requester {
     Owner(Signature),
     Key(PublicKey),
@@ -32,7 +33,7 @@ pub enum AppendOnlyData {
     UnpubUnseq(appendable_data::UnseqAppendOnlyData<UnpubPermissions>),
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, PartialOrd, Ord, Eq, Hash)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AppendOperation {
     // Address of an AppendOnlyData object on the network.
     address: AppendOnlyDataRef,
@@ -44,7 +45,7 @@ pub struct AppendOperation {
 
 /// RPC Request that is sent to vaults
 #[allow(clippy::large_enum_variant)]
-#[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Clone, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Request {
     //
     // ===== Immutable Data =====

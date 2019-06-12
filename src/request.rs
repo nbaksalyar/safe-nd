@@ -44,7 +44,7 @@ pub struct AppendOperation {
 }
 
 /// Wrapper message that contains the request, message ID, and the requester ID,
-/// which should also contain the signature(s) if it's sent by the owner(s).
+/// which should also contain the signature if it's sent by the owner(s).
 #[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct Message {
     pub request: Request,

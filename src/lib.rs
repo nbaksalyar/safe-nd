@@ -67,7 +67,7 @@ mod identity;
 mod immutable_data;
 mod public_key;
 
-pub use coins::Coins;
+pub use coins::{Coins, MAX_COINS_VALUE};
 pub use errors::{EntryError, Error};
 pub use identity::{
     app::FullId as AppFullId, app::PublicId as AppPublicId, client::FullId as ClientFullId,
@@ -87,7 +87,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug, Display, Formatter};
 
 /// Permissions for an app stored by the Elders.
-#[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Clone, Serialize, Deserialize, Default)]
+#[derive(Copy, Hash, Eq, PartialEq, PartialOrd, Ord, Clone, Serialize, Deserialize, Default)]
 pub struct AppPermissions {
     transfer_coins: bool,
 }
@@ -122,11 +122,7 @@ impl Display for XorName {
 
 impl Distribution<XorName> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> XorName {
-        let mut ret = [0u8; XOR_NAME_LEN];
-        for r in ret[..].iter_mut() {
-            *r = rng.gen();
-        }
-        XorName(ret)
+        XorName(rng.gen())
     }
 }
 

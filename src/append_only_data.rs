@@ -375,6 +375,61 @@ macro_rules! impl_appendable_data {
             inner: AppendOnly<P>,
         }
 
+        impl<P> $flavour<P>
+        where
+            P: Permissions + std::hash::Hash + Clone,
+        {
+            pub fn shell(&self, index: u64) -> Result<Self> {
+                if index > self.entry_index() {
+                    return Err(Error::NoSuchEntry);
+                }
+
+                let mut max_owner_index: u64 = 0;
+                let mut prev_owner_index: u64 = 0;
+                let mut max_perm_index: u64 = 0;
+                let mut prev_perm_index: u64 = 0;
+
+                for perm in self.inner.permissions.iter() {
+                    if perm.data_index() > max_perm_index {
+                        prev_perm_index = max_perm_index;
+                        max_perm_index = perm.data_index();
+                    }
+
+                    if max_perm_index < index {
+                        return Err(Error::NoSuchEntry);
+                    } else if max_perm_index == index {
+                        prev_perm_index = max_perm_index;
+                    } else {
+                        continue;
+                    }
+                }
+
+                for owner in self.inner.owners.iter() {
+                    if owner.data_index() > max_owner_index {
+                        prev_owner_index = max_owner_index;
+                        max_owner_index = owner.data_index();
+                    }
+
+                    if max_owner_index < index {
+                        return Err(Error::NoSuchEntry);
+                    } else if max_owner_index == index {
+                        prev_owner_index = max_owner_index;
+                    } else {
+                        continue;
+                    }
+                }
+                Ok(Self {
+                    inner: AppendOnly {
+                        address: self.inner.address,
+                        data: Vec::new(),
+                        permissions: self.inner.permissions[..(prev_perm_index + 1) as usize]
+                            .to_vec(),
+                        owners: self.inner.owners[..(prev_owner_index + 1) as usize].to_vec(),
+                    },
+                })
+            }
+        }
+
         impl<P> AppendOnlyData<P> for $flavour<P>
         where
             P: Permissions + std::hash::Hash + Clone,
@@ -568,55 +623,6 @@ impl SeqAppendOnlyData<PubPermissions> {
             },
         }
     }
-
-    pub fn shell(&self, index: u64) -> Result<Self> {
-        if index > self.entry_index() {
-            return Err(Error::NoSuchEntry);
-        }
-
-        let mut max_owner_index: u64 = 0;
-        let mut prev_owner_index: u64 = 0;
-        let mut max_perm_index: u64 = 0;
-        let mut prev_perm_index: u64 = 0;
-
-        for perm in self.inner.permissions.iter() {
-            if perm.data_index() > max_perm_index {
-                prev_perm_index = max_perm_index;
-                max_perm_index = perm.data_index();
-            }
-
-            if max_perm_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_perm_index == index {
-                prev_perm_index = max_perm_index;
-            } else {
-                continue;
-            }
-        }
-
-        for owner in self.inner.owners.iter() {
-            if owner.data_index() > max_owner_index {
-                prev_owner_index = max_owner_index;
-                max_owner_index = owner.data_index();
-            }
-
-            if max_owner_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_owner_index == index {
-                prev_owner_index = max_owner_index;
-            } else {
-                continue;
-            }
-        }
-        Ok(Self {
-            inner: AppendOnly {
-                address: self.inner.address,
-                data: Vec::new(),
-                permissions: self.inner.permissions[..(prev_perm_index + 1) as usize].to_vec(),
-                owners: self.inner.owners[..(prev_owner_index + 1) as usize].to_vec(),
-            },
-        })
-    }
 }
 
 impl UnseqAppendOnlyData<PubPermissions> {
@@ -629,55 +635,6 @@ impl UnseqAppendOnlyData<PubPermissions> {
                 owners: Vec::new(),
             },
         }
-    }
-
-    pub fn shell(&self, index: u64) -> Result<Self> {
-        if index > self.entry_index() {
-            return Err(Error::NoSuchEntry);
-        }
-
-        let mut max_owner_index: u64 = 0;
-        let mut prev_owner_index: u64 = 0;
-        let mut max_perm_index: u64 = 0;
-        let mut prev_perm_index: u64 = 0;
-
-        for perm in self.inner.permissions.iter() {
-            if perm.data_index() > max_perm_index {
-                prev_perm_index = max_perm_index;
-                max_perm_index = perm.data_index();
-            }
-
-            if max_perm_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_perm_index == index {
-                prev_perm_index = max_perm_index;
-            } else {
-                continue;
-            }
-        }
-
-        for owner in self.inner.owners.iter() {
-            if owner.data_index() > max_owner_index {
-                prev_owner_index = max_owner_index;
-                max_owner_index = owner.data_index();
-            }
-
-            if max_owner_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_owner_index == index {
-                prev_owner_index = max_owner_index;
-            } else {
-                continue;
-            }
-        }
-        Ok(Self {
-            inner: AppendOnly {
-                address: self.inner.address,
-                data: Vec::new(),
-                permissions: self.inner.permissions[..(prev_perm_index + 1) as usize].to_vec(),
-                owners: self.inner.owners[..(prev_owner_index + 1) as usize].to_vec(),
-            },
-        })
     }
 }
 
@@ -692,55 +649,6 @@ impl SeqAppendOnlyData<UnpubPermissions> {
             },
         }
     }
-
-    pub fn shell(&self, index: u64) -> Result<Self> {
-        if index > self.entry_index() {
-            return Err(Error::NoSuchEntry);
-        }
-
-        let mut max_owner_index: u64 = 0;
-        let mut prev_owner_index: u64 = 0;
-        let mut max_perm_index: u64 = 0;
-        let mut prev_perm_index: u64 = 0;
-
-        for perm in self.inner.permissions.iter() {
-            if perm.data_index() > max_perm_index {
-                prev_perm_index = max_perm_index;
-                max_perm_index = perm.data_index();
-            }
-
-            if max_perm_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_perm_index == index {
-                prev_perm_index = max_perm_index;
-            } else {
-                continue;
-            }
-        }
-
-        for owner in self.inner.owners.iter() {
-            if owner.data_index() > max_owner_index {
-                prev_owner_index = max_owner_index;
-                max_owner_index = owner.data_index();
-            }
-
-            if max_owner_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_owner_index == index {
-                prev_owner_index = max_owner_index;
-            } else {
-                continue;
-            }
-        }
-        Ok(Self {
-            inner: AppendOnly {
-                address: self.inner.address,
-                data: Vec::new(),
-                permissions: self.inner.permissions[..(prev_perm_index + 1) as usize].to_vec(),
-                owners: self.inner.owners[..(prev_owner_index + 1) as usize].to_vec(),
-            },
-        })
-    }
 }
 
 impl UnseqAppendOnlyData<UnpubPermissions> {
@@ -753,55 +661,6 @@ impl UnseqAppendOnlyData<UnpubPermissions> {
                 owners: Vec::new(),
             },
         }
-    }
-
-    pub fn shell(&self, index: u64) -> Result<Self> {
-        if index > self.entry_index() {
-            return Err(Error::NoSuchEntry);
-        }
-
-        let mut max_owner_index: u64 = 0;
-        let mut prev_owner_index: u64 = 0;
-        let mut max_perm_index: u64 = 0;
-        let mut prev_perm_index: u64 = 0;
-
-        for perm in self.inner.permissions.iter() {
-            if perm.data_index() > max_perm_index {
-                prev_perm_index = max_perm_index;
-                max_perm_index = perm.data_index();
-            }
-
-            if max_perm_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_perm_index == index {
-                prev_perm_index = max_perm_index;
-            } else {
-                continue;
-            }
-        }
-
-        for owner in self.inner.owners.iter() {
-            if owner.data_index() > max_owner_index {
-                prev_owner_index = max_owner_index;
-                max_owner_index = owner.data_index();
-            }
-
-            if max_owner_index < index {
-                return Err(Error::NoSuchEntry);
-            } else if max_owner_index == index {
-                prev_owner_index = max_owner_index;
-            } else {
-                continue;
-            }
-        }
-        Ok(Self {
-            inner: AppendOnly {
-                address: self.inner.address,
-                data: Vec::new(),
-                permissions: self.inner.permissions[..(prev_perm_index + 1) as usize].to_vec(),
-                owners: self.inner.owners[..(prev_owner_index + 1) as usize].to_vec(),
-            },
-        })
     }
 }
 
